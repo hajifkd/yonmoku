@@ -4,6 +4,7 @@ use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct McTreeRoot {
+    current_board: Board,
     leaves: [Option<McTreeLeaf>; N * N],
 }
 
@@ -150,13 +151,20 @@ impl McTreeRoot {
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
-        McTreeRoot { leaves: leaves }
+        McTreeRoot {
+            current_board: board,
+            leaves: leaves,
+        }
     }
 
     /**
      * return (hand, eval)
      */
     pub fn select(&mut self, n_total: usize) -> Option<(usize, f32)> {
+        if let Some(index) = self.current_board.check_index() {
+            return Some((index, -100f32));
+        }
+
         (0..N * N)
             .par_bridge()
             .filter_map(|index| {
