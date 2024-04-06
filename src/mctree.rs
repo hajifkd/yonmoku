@@ -49,7 +49,7 @@ impl McTreeLeaf {
         let mut board = self.current_board.clone();
 
         while !board.is_full() {
-            if board.is_finished() {
+            if board.win_index().is_some() {
                 // 次打つプレイヤーが勝利する
                 if board.next_player == self.current_board.next_player {
                     self.n_win += 1;
@@ -58,6 +58,12 @@ impl McTreeLeaf {
                     self.n_lose += 1;
                     return McResult::Lose;
                 }
+            }
+
+            // 王手がかかっていたら、解除する
+            if let Some(index) = board.check_index() {
+                board = board.put(index).unwrap();
+                continue;
             }
 
             loop {
@@ -75,7 +81,7 @@ impl McTreeLeaf {
     }
 
     pub fn expand(&mut self) -> (usize, usize, usize) {
-        if self.current_board.is_finished() {
+        if self.current_board.win_index().is_some() {
             self.n_trial += 1;
             self.n_win += 1;
 
@@ -147,7 +153,10 @@ impl McTreeRoot {
         McTreeRoot { leaves: leaves }
     }
 
-    pub fn select(&mut self, n_total: usize) -> Option<usize> {
+    /**
+     * return (hand, eval)
+     */
+    pub fn select(&mut self, n_total: usize) -> Option<(usize, f32)> {
         (0..N * N)
             .par_bridge()
             .filter_map(|index| {
@@ -158,15 +167,9 @@ impl McTreeRoot {
                 for n in 0..n_total {
                     leaf.as_mut().unwrap().select(n + 1);
                 }
-                println!(
-                    "player: {:?} index: {} select rate:{}",
-                    leaf.as_ref().unwrap().current_board.next_player,
-                    index,
-                    leaf.as_ref().unwrap().win_rate()
-                );
                 Some((leaf.unwrap().win_rate(), index))
             })
             .max_by(|(k1, _), (k2, _)| k2.partial_cmp(k1).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(_, index)| index)
+            .map(|(rate, index)| (index, rate))
     }
 }

@@ -1,21 +1,26 @@
 use std::io;
 
-use yonmoku::{board::Board, mctree::McTreeRoot, N};
+use yonmoku::{board::Board, mctree::McTreeRoot, unpack_index, N};
 
-fn next(board: Board, stone: usize) -> Option<usize> {
+fn next(board: Board, stone: usize) -> Option<(usize, f32)> {
     let n_try = 50_000;
     let mut tree = McTreeRoot::new(board);
-    tree.select(n_try * (1 + stone / 5))
+    tree.select(n_try * (1 + stone * stone / 32))
+}
+
+fn prompt(msg: &str) -> io::Result<String> {
+    println!("{}", msg);
+    let mut buffer = String::new();
+    let stdin = io::stdin(); // We get `Stdin` here.
+    stdin.read_line(&mut buffer)?;
+    let buffer = buffer.trim_end();
+    Ok(buffer.to_owned())
 }
 
 fn main() -> io::Result<()> {
     let mut sente = true;
     while {
-        println!("[S]ente or [G]ote?");
-        let mut buffer = String::new();
-        let stdin = io::stdin(); // We get `Stdin` here.
-        stdin.read_line(&mut buffer)?;
-        let buffer = buffer.trim_end();
+        let buffer: &str = &prompt("[S]ente or [G]ote?")?;
         match buffer {
             "S" => false,
             "G" => {
@@ -26,29 +31,40 @@ fn main() -> io::Result<()> {
         }
     } {}
 
-    let mut board = Board::new();
+    let mut boards = vec![Board::new()];
     let mut stone = 0;
 
     if !sente {
-        let hand = next(board.clone(), stone).unwrap();
-        println!("CPU: {},{}", hand / N, hand % N);
+        let board = boards.last().unwrap().clone();
+        let (hand, rate) = next(board.clone(), stone).unwrap();
+        println!(
+            "CPU: {:?}, CPU Rate: {}%",
+            unpack_index(hand),
+            100 - (rate * 100f32) as i32
+        );
         board.show();
-        board = board.put(hand).unwrap();
-        board.show();
+        boards.push(board.put(hand).unwrap());
+        boards.last().unwrap().show();
         stone += 1;
     }
 
-    loop {
+    'game: loop {
         let mut human = (0, 0);
+        let board = boards.last().unwrap().clone();
         while {
-            println!("i,j?");
-            let mut buffer = String::new();
-            let stdin = io::stdin(); // We get `Stdin` here.
-            stdin.read_line(&mut buffer)?;
-            let buffer = buffer.trim_end();
+            let buffer = prompt("i,j?[M]atta?")?;
             let input = buffer.split(",").collect::<Vec<_>>();
 
-            if input.len() != 2 {
+            if buffer == "M" {
+                if boards.len() > 2 {
+                    boards.pop();
+                    boards.pop();
+                    boards.last().unwrap().show();
+                    stone -= 2;
+                    continue 'game;
+                }
+                true
+            } else if input.len() != 2 {
                 true
             } else {
                 if let (Ok(i), Ok(j)) = (input[0].parse::<usize>(), input[1].parse::<usize>()) {
@@ -64,24 +80,38 @@ fn main() -> io::Result<()> {
             }
         } {}
         if let Some(board_human) = board.put(human.0 * N + human.1) {
+            let board = board_human.clone();
+            boards.push(board_human);
             stone += 1;
-            board = board_human;
             board.show();
-            if board.is_finished() {
-                println!("You lose");
+            if let Some(index) = board.win_index() {
+                println!("You lose, put {:?}", unpack_index(index));
+                if prompt("[M]atta?")? == "M" {
+                    if boards.len() > 2 {
+                        boards.pop();
+                        boards.pop();
+                        boards.last().unwrap().show();
+                        stone -= 2;
+                        continue 'game;
+                    }
+                }
                 break;
             }
             let hand = next(board.clone(), stone);
             if hand.is_none() {
                 break;
             }
-            let hand = hand.unwrap();
-            //println!("{:?}", board.find_index(0));
-            println!("CPU: {},{}", hand / N, hand % N);
-            board = board.put(hand).unwrap();
+            let (hand, rate) = hand.unwrap();
+            println!(
+                "CPU: {:?}, CPU Rate: {}%",
+                unpack_index(hand),
+                100 - (rate * 100f32) as i32
+            );
+            boards.push(board.put(hand).unwrap());
+            let board_cpu = boards.last().unwrap();
             stone += 1;
-            board.show();
-            if board.is_finished() {
+            board_cpu.show();
+            if board_cpu.win_index().is_some() {
                 println!("You win");
                 break;
             }

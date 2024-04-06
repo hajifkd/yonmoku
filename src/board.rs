@@ -97,123 +97,84 @@ impl Board {
             .all(|ps| ps.into_iter().all(|&p| p != Piece::Empty))
     }
 
-    /**
-     * return true if the current player win
-     */
-    pub fn is_finished(&self) -> bool {
+    fn win_index_player(&self, player: Player) -> Option<usize> {
+        let piece = player.into();
         for i in 0..N {
             for j in 0..N {
                 let index = i * N + j;
                 if let Some(k) = self.find_index(index) {
                     // 4 in z
-                    if k == N - 1
-                        && self.board[index]
-                            .iter()
-                            .take(N - 1)
-                            .all(|&p| p == self.next_player.into())
-                    {
-                        return true;
+                    if k == N - 1 && self.board[index].iter().take(N - 1).all(|&p| p == piece) {
+                        return Some(index);
                     }
                     // 4 in x
-                    if (0..N)
-                        .all(|ip| i == ip || self.board[ip * N + j][k] == self.next_player.into())
-                    {
-                        return true;
+                    if (0..N).all(|ip| i == ip || self.board[ip * N + j][k] == piece) {
+                        return Some(index);
                     }
                     // 4 in y
-                    if (0..N)
-                        .all(|jp| j == jp || self.board[i * N + jp][k] == self.next_player.into())
-                    {
-                        return true;
+                    if (0..N).all(|jp| j == jp || self.board[i * N + jp][k] == piece) {
+                        return Some(index);
                     }
                     // 4 in x-y
-                    if i == j
-                        && (0..N).all(|ip| {
-                            i == ip || self.board[ip * N + ip][k] == self.next_player.into()
-                        })
-                    {
-                        return true;
+                    if i == j && (0..N).all(|ip| i == ip || self.board[ip * N + ip][k] == piece) {
+                        return Some(index);
                     }
                     // 4 in y-x
                     if i + j == N - 1
-                        && (0..N).all(|ip| {
-                            i == ip
-                                || self.board[ip * N + (N - 1 - ip)][k] == self.next_player.into()
-                        })
+                        && (0..N).all(|ip| i == ip || self.board[ip * N + (N - 1 - ip)][k] == piece)
                     {
-                        return true;
+                        return Some(index);
                     }
                     // 4 in y-z
-                    if i == k
-                        && (0..N).all(|ip| {
-                            i == ip || self.board[ip * N + j][ip] == self.next_player.into()
-                        })
-                    {
-                        return true;
+                    if i == k && (0..N).all(|ip| i == ip || self.board[ip * N + j][ip] == piece) {
+                        return Some(index);
                     }
                     // 4 in z-y
                     if i + k == N - 1
-                        && (0..N).all(|ip| {
-                            i == ip || self.board[ip * N + j][N - 1 - ip] == self.next_player.into()
-                        })
+                        && (0..N).all(|ip| i == ip || self.board[ip * N + j][N - 1 - ip] == piece)
                     {
-                        return true;
+                        return Some(index);
                     }
                     // 4 in x-z
-                    if j == k
-                        && (0..N).all(|jp| {
-                            j == jp || self.board[i * N + jp][jp] == self.next_player.into()
-                        })
-                    {
-                        return true;
+                    if j == k && (0..N).all(|jp| j == jp || self.board[i * N + jp][jp] == piece) {
+                        return Some(index);
                     }
                     // 4 in z-x
                     if j + k == N - 1
-                        && (0..N).all(|jp| {
-                            j == jp || self.board[i * N + jp][N - 1 - jp] == self.next_player.into()
-                        })
+                        && (0..N).all(|jp| j == jp || self.board[i * N + jp][N - 1 - jp] == piece)
                     {
-                        return true;
+                        return Some(index);
                     }
                     // 4 in x-y-z
                     if i == j
                         && i == k
-                        && (0..N).all(|ip| {
-                            i == ip || self.board[ip * N + ip][ip] == self.next_player.into()
-                        })
+                        && (0..N).all(|ip| i == ip || self.board[ip * N + ip][ip] == piece)
                     {
-                        return true;
+                        return Some(index);
                     }
                     // 4 in y-x-z
                     if i + j == N - 1
                         && j == k
                         && (0..N).all(|ip| {
-                            i == ip
-                                || self.board[ip * N + (N - 1 - ip)][N - 1 - ip]
-                                    == self.next_player.into()
+                            i == ip || self.board[ip * N + (N - 1 - ip)][N - 1 - ip] == piece
                         })
                     {
-                        return true;
+                        return Some(index);
                     }
                     // 4 in z-y-x
                     if i == j
                         && i + k == N - 1
-                        && (0..N).all(|ip| {
-                            i == ip
-                                || self.board[ip * N + ip][N - 1 - ip] == self.next_player.into()
-                        })
+                        && (0..N).all(|ip| i == ip || self.board[ip * N + ip][N - 1 - ip] == piece)
                     {
-                        return true;
+                        return Some(index);
                     }
                     // 4 in z-x-y
                     if i + j == N - 1
                         && i == k
-                        && (0..N).all(|ip| {
-                            i == ip
-                                || self.board[ip * N + (N - 1 - ip)][ip] == self.next_player.into()
-                        })
+                        && (0..N)
+                            .all(|ip| i == ip || self.board[ip * N + (N - 1 - ip)][ip] == piece)
                     {
-                        return true;
+                        return Some(index);
                     }
                 } else {
                     continue;
@@ -221,7 +182,21 @@ impl Board {
             }
         }
 
-        false
+        None
+    }
+
+    /**
+     * return true if the current player wins
+     */
+    pub fn win_index(&self) -> Option<usize> {
+        self.win_index_player(self.next_player)
+    }
+
+    /**
+     * return true if the current player is checked
+     */
+    pub fn check_index(&self) -> Option<usize> {
+        self.win_index_player(self.next_player.next_player())
     }
 }
 
@@ -232,13 +207,13 @@ mod tests {
     #[test]
     fn test_win() {
         let mut board = Board::new();
-        assert_eq!(board.is_finished(), false);
+        assert_eq!(board.win_index().is_some(), false);
         for k in 0..N * N {
             board = Board::new();
             for i in 0..N - 1 {
                 board.board[k][i] = Piece::Black;
             }
-            assert_eq!(board.is_finished(), true);
+            assert_eq!(board.win_index(), Some(k));
         }
         board = Board::new();
         board.board[0][0] = Piece::Black;
@@ -250,7 +225,7 @@ mod tests {
         board.board[15][1] = Piece::White;
         board.board[15][2] = Piece::White;
         board.board[15][3] = Piece::Black;
-        assert_eq!(board.is_finished(), true);
+        assert_eq!(board.win_index(), Some(5));
 
         board = Board::new();
         board.board[3][0] = Piece::Black;
@@ -262,6 +237,6 @@ mod tests {
         board.board[12][1] = Piece::White;
         board.board[12][2] = Piece::White;
         board.board[12][3] = Piece::Black;
-        assert_eq!(board.is_finished(), true);
+        assert_eq!(board.win_index(), Some(6));
     }
 }
