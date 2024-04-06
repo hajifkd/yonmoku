@@ -75,6 +75,12 @@ impl McTreeLeaf {
     }
 
     pub fn expand(&mut self) -> (usize, usize, usize) {
+        if self.current_board.is_finished() {
+            self.n_trial += 1;
+            self.n_win += 1;
+
+            return (1, 1, 0);
+        }
         let mut n_trial = 0;
         let mut n_win = 0;
         let mut n_lose = 0;

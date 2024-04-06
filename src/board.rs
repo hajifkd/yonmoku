@@ -143,6 +143,38 @@ impl Board {
                     {
                         return true;
                     }
+                    // 4 in y-z
+                    if i == k
+                        && (0..N).all(|ip| {
+                            i == ip || self.board[ip * N + j][ip] == self.next_player.into()
+                        })
+                    {
+                        return true;
+                    }
+                    // 4 in z-y
+                    if i + k == N - 1
+                        && (0..N).all(|ip| {
+                            i == ip || self.board[ip * N + j][N - 1 - ip] == self.next_player.into()
+                        })
+                    {
+                        return true;
+                    }
+                    // 4 in x-z
+                    if j == k
+                        && (0..N).all(|jp| {
+                            j == jp || self.board[i * N + jp][jp] == self.next_player.into()
+                        })
+                    {
+                        return true;
+                    }
+                    // 4 in z-x
+                    if j + k == N - 1
+                        && (0..N).all(|jp| {
+                            j == jp || self.board[i * N + jp][N - 1 - jp] == self.next_player.into()
+                        })
+                    {
+                        return true;
+                    }
                     // 4 in x-y-z
                     if i == j
                         && i == k

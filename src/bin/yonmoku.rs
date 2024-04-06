@@ -2,10 +2,10 @@ use std::io;
 
 use yonmoku::{board::Board, mctree::McTreeRoot, N};
 
-fn next(board: Board) -> Option<usize> {
-    let n_try = 200_000;
+fn next(board: Board, stone: usize) -> Option<usize> {
+    let n_try = 50_000;
     let mut tree = McTreeRoot::new(board);
-    tree.select(n_try)
+    tree.select(n_try * (1 + stone / 5))
 }
 
 fn main() -> io::Result<()> {
@@ -27,13 +27,15 @@ fn main() -> io::Result<()> {
     } {}
 
     let mut board = Board::new();
+    let mut stone = 0;
 
     if !sente {
-        let hand = next(board.clone()).unwrap();
+        let hand = next(board.clone(), stone).unwrap();
         println!("CPU: {},{}", hand / N, hand % N);
         board.show();
         board = board.put(hand).unwrap();
         board.show();
+        stone += 1;
     }
 
     loop {
@@ -62,13 +64,14 @@ fn main() -> io::Result<()> {
             }
         } {}
         if let Some(board_human) = board.put(human.0 * N + human.1) {
+            stone += 1;
             board = board_human;
             board.show();
             if board.is_finished() {
                 println!("You lose");
                 break;
             }
-            let hand = next(board.clone());
+            let hand = next(board.clone(), stone);
             if hand.is_none() {
                 break;
             }
@@ -76,6 +79,7 @@ fn main() -> io::Result<()> {
             //println!("{:?}", board.find_index(0));
             println!("CPU: {},{}", hand / N, hand % N);
             board = board.put(hand).unwrap();
+            stone += 1;
             board.show();
             if board.is_finished() {
                 println!("You win");
