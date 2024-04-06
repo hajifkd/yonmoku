@@ -5,7 +5,7 @@ use yonmoku::{board::Board, mctree::McTreeRoot, unpack_index, N};
 fn next(board: Board, stone: usize) -> Option<(usize, f32)> {
     let n_try = 50_000;
     let mut tree = McTreeRoot::new(board);
-    tree.select(n_try * (1 + stone * stone / 32))
+    tree.select(n_try * (1 + stone * stone / 24))
 }
 
 fn prompt(msg: &str) -> io::Result<String> {
@@ -87,7 +87,8 @@ fn main() -> io::Result<()> {
             if let Some(index) = board.win_index() {
                 println!("You lose, put {:?}", unpack_index(index));
                 if prompt("[M]atta?")? == "M" {
-                    if boards.len() > 2 {
+                    if boards.len() > 3 {
+                        boards.pop();
                         boards.pop();
                         boards.pop();
                         boards.last().unwrap().show();
