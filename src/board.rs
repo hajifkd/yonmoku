@@ -42,7 +42,7 @@ impl Player {
 
 #[derive(Clone, Debug)]
 pub struct ArrayBoard {
-    board: [[Piece; N]; N * N],
+    pub(crate) board: [[Piece; N]; N * N],
     pub(crate) next_player: Player,
 }
 

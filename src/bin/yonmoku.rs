@@ -1,9 +1,9 @@
 use std::io;
 
-use yonmoku::{bitboard::BitBoard, mctree::McTreeRoot, unpack_index, N};
+use yonmoku::{bitboard::BitBoard, simple_puct::McTreeRoot, unpack_index, N};
 
 fn next(board: BitBoard, stone: usize) -> Option<(usize, f32)> {
-    let n_try = 100_000;
+    let n_try = 500_000;
     let mut tree = McTreeRoot::new(board);
     tree.select(n_try * (1 + stone * stone / 24))
 }
@@ -87,9 +87,7 @@ fn main() -> io::Result<()> {
             if let Some(index) = board.win_index() {
                 println!("You lose, put {:?}", unpack_index(index));
                 if prompt("[M]atta?")? == "M" {
-                    if boards.len() > 3 {
-                        boards.pop();
-                        boards.pop();
+                    if boards.len() > 1 {
                         boards.pop();
                         boards.last().unwrap().show();
                         stone -= 2;

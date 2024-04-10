@@ -1,9 +1,12 @@
 use lazy_static::lazy_static;
 
-use crate::{board::Player, N};
+use crate::{
+    board::{self, ArrayBoard, Player},
+    N,
+};
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Debug)]
-struct Piece(u8);
+pub(crate) struct Piece(u8);
 
 const BLACK_PIECE: Piece = Piece(0b01);
 const WHITE_PIECE: Piece = Piece(0b10);
@@ -40,7 +43,7 @@ fn index_to_bit(piece: u128, index: usize) -> u128 {
 }
 
 lazy_static! {
-    static ref CHECK_MASK_TABLE: [Vec<Vec<u128>>; 2] = {
+    pub(crate) static ref CHECK_MASK_TABLE: [Vec<Vec<u128>>; 2] = {
         let mut result = [vec![], vec![]];
 
         for piece in (BLACK_PIECE.0 as usize)..=(WHITE_PIECE.0 as usize) {
@@ -133,10 +136,40 @@ lazy_static! {
     };
 }
 
+pub fn player_index(player: Player) -> usize {
+    match player {
+        Player::Black => BLACK_PIECE.0 as _,
+        Player::White => WHITE_PIECE.0 as _,
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct BitBoard {
-    board: u128,
+    pub(crate) board: u128,
     pub(crate) next_player: Player,
+}
+
+impl Into<ArrayBoard> for &BitBoard {
+    fn into(self) -> ArrayBoard {
+        let mut result = ArrayBoard::new();
+        result.next_player = self.next_player;
+        for i in 0..N {
+            for j in 0..N {
+                for k in 0..N {
+                    let index = index_from_ijk(i, j, k);
+                    result.board[i * N + j][k] =
+                        if self.board & index_to_bit(BLACK_PIECE.0 as _, index) != 0 {
+                            board::Piece::Black
+                        } else if self.board & index_to_bit(WHITE_PIECE.0 as _, index) != 0 {
+                            board::Piece::White
+                        } else {
+                            board::Piece::Empty
+                        }
+                }
+            }
+        }
+        result
+    }
 }
 
 impl BitBoard {
