@@ -1,7 +1,7 @@
 use rand::random;
-use yonmoku::{board::Board, mctree_old::McTreeRoot, N};
+use yonmoku::{board::ArrayBoard, mctree_old::McTreeRoot, N};
 
-fn next_mcts_ucb1(board: Board, stone: usize) -> Option<usize> {
+fn next_mcts_ucb1(board: ArrayBoard, stone: usize) -> Option<usize> {
     let n_try = 5_000;
     let mut tree = McTreeRoot::new(board);
     tree.select(n_try * (1 + stone * stone / 16))
@@ -11,7 +11,7 @@ fn next_mcts_ucb1(board: Board, stone: usize) -> Option<usize> {
 /**
  * ランダム選択。ただし王手には必ず応手する。
  */
-fn random_choose(board: &Board) -> Option<usize> {
+fn random_choose(board: &ArrayBoard) -> Option<usize> {
     if board.is_full() {
         None
     } else {
@@ -26,11 +26,15 @@ fn random_choose(board: &Board) -> Option<usize> {
     }
 }
 
-fn battle(cpu_sente: bool, n_try: usize, cpu: fn(Board, usize) -> Option<usize>) -> (f64, f64) {
+fn battle(
+    cpu_sente: bool,
+    n_try: usize,
+    cpu: fn(ArrayBoard, usize) -> Option<usize>,
+) -> (f64, f64) {
     let mut n_win = 0;
     let mut n_draw = 0;
     for _i in 0..n_try {
-        let mut board = Board::new();
+        let mut board = ArrayBoard::new();
         let mut stone = 0;
         if !cpu_sente {
             board = board.put(random_choose(&board).unwrap()).unwrap();
@@ -68,11 +72,11 @@ fn battle(cpu_sente: bool, n_try: usize, cpu: fn(Board, usize) -> Option<usize>)
     (n_win as f64 / n_try as f64, n_draw as f64 / n_try as f64)
 }
 
-fn battle_self(n_try: usize, cpu: fn(Board, usize) -> Option<usize>) -> (f64, f64) {
+fn battle_self(n_try: usize, cpu: fn(ArrayBoard, usize) -> Option<usize>) -> (f64, f64) {
     let mut n_win = 0;
     let mut n_draw = 0;
     for _i in 0..n_try {
-        let mut board = Board::new();
+        let mut board = ArrayBoard::new();
         let mut stone = 0;
 
         'game: loop {

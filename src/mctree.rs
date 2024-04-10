@@ -1,16 +1,16 @@
-use crate::{board::Board, N};
+use crate::{bitboard::BitBoard, N};
 use rand::random;
 use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct McTreeRoot {
-    current_board: Board,
+    current_board: BitBoard,
     leaves: [Option<McTreeLeaf>; N * N],
 }
 
 #[derive(Debug, Clone)]
 pub struct McTreeLeaf {
-    current_board: Board,
+    current_board: BitBoard,
     n_trial: usize,
     n_win: usize,
     n_lose: usize,
@@ -25,7 +25,7 @@ pub enum McResult {
 }
 
 impl McTreeLeaf {
-    pub fn new(board: Board) -> Self {
+    pub fn new(board: BitBoard) -> Self {
         McTreeLeaf {
             current_board: board,
             n_trial: 0,
@@ -145,7 +145,7 @@ impl McTreeLeaf {
 }
 
 impl McTreeRoot {
-    pub fn new(board: Board) -> Self {
+    pub fn new(board: BitBoard) -> Self {
         let leaves = (0..N * N)
             .map(|index| board.put(index).map(McTreeLeaf::new))
             .collect::<Vec<_>>()

@@ -1,13 +1,13 @@
-use yonmoku::{board::Board, mctree_old::McTreeRoot, unpack_index};
+use yonmoku::{bitboard::BitBoard, mctree::McTreeRoot, unpack_index};
 
-fn next(board: Board, stone: usize) -> Option<(usize, f32)> {
+fn next(board: BitBoard, stone: usize) -> Option<(usize, f32)> {
     let n_try = 50_000;
     let mut tree = McTreeRoot::new(board);
     tree.select(n_try * (1 + stone * stone / 24))
 }
 
 fn main() {
-    let mut board = Board::new();
+    let mut board = BitBoard::new();
     let mut stone = 0;
     loop {
         stone += 1;

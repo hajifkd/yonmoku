@@ -41,14 +41,14 @@ impl Player {
 }
 
 #[derive(Clone, Debug)]
-pub struct Board {
+pub struct ArrayBoard {
     board: [[Piece; N]; N * N],
     pub(crate) next_player: Player,
 }
 
-impl Board {
-    pub fn new() -> Board {
-        Board {
+impl ArrayBoard {
+    pub fn new() -> ArrayBoard {
+        ArrayBoard {
             board: Default::default(),
             next_player: Player::Black,
         }
@@ -206,16 +206,16 @@ mod tests {
 
     #[test]
     fn test_win() {
-        let mut board = Board::new();
+        let mut board = ArrayBoard::new();
         assert_eq!(board.win_index().is_some(), false);
         for k in 0..N * N {
-            board = Board::new();
+            board = ArrayBoard::new();
             for i in 0..N - 1 {
                 board.board[k][i] = Piece::Black;
             }
             assert_eq!(board.win_index(), Some(k));
         }
-        board = Board::new();
+        board = ArrayBoard::new();
         board.board[0][0] = Piece::Black;
         board.board[5][0] = Piece::White;
         board.board[10][0] = Piece::White;
@@ -227,7 +227,7 @@ mod tests {
         board.board[15][3] = Piece::Black;
         assert_eq!(board.win_index(), Some(5));
 
-        board = Board::new();
+        board = ArrayBoard::new();
         board.board[3][0] = Piece::Black;
         board.board[6][0] = Piece::White;
         board.board[9][0] = Piece::White;

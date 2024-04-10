@@ -1,9 +1,9 @@
 use std::io;
 
-use yonmoku::{board::Board, mctree_old::McTreeRoot, unpack_index, N};
+use yonmoku::{bitboard::BitBoard, mctree::McTreeRoot, unpack_index, N};
 
-fn next(board: Board, stone: usize) -> Option<(usize, f32)> {
-    let n_try = 50_000;
+fn next(board: BitBoard, stone: usize) -> Option<(usize, f32)> {
+    let n_try = 100_000;
     let mut tree = McTreeRoot::new(board);
     tree.select(n_try * (1 + stone * stone / 24))
 }
@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
         }
     } {}
 
-    let mut boards = vec![Board::new()];
+    let mut boards = vec![BitBoard::new()];
     let mut stone = 0;
 
     if !sente {
