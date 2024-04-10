@@ -1,6 +1,6 @@
 use std::io;
 
-use yonmoku::{board::Board, mctree::McTreeRoot, unpack_index, N};
+use yonmoku::{board::Board, mctree_old::McTreeRoot, unpack_index, N};
 
 fn next(board: Board, stone: usize) -> Option<(usize, f32)> {
     let n_try = 50_000;

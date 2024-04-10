@@ -1,5 +1,5 @@
 use rand::random;
-use yonmoku::{board::Board, mctree::McTreeRoot, N};
+use yonmoku::{board::Board, mctree_old::McTreeRoot, N};
 
 fn next_mcts_ucb1(board: Board, stone: usize) -> Option<usize> {
     let n_try = 5_000;

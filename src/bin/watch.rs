@@ -1,4 +1,4 @@
-use yonmoku::{board::Board, mctree::McTreeRoot, unpack_index};
+use yonmoku::{board::Board, mctree_old::McTreeRoot, unpack_index};
 
 fn next(board: Board, stone: usize) -> Option<(usize, f32)> {
     let n_try = 50_000;

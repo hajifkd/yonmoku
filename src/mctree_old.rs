@@ -118,16 +118,16 @@ impl McTreeLeaf {
         (n_trial, n_win, n_lose)
     }
 
-    pub fn select(&mut self) -> (usize, usize, usize) {
+    pub fn select(&mut self, n_try: usize) -> (usize, usize, usize) {
         if let Some(leaves) = &mut self.leaves {
             // choose appropriate k
             let k = leaves
                 .into_iter()
                 .filter(|o| o.is_some())
-                .map(|o| (o.as_ref().map(|p| p.select_rate(self.n_trial)).unwrap(), o))
+                .map(|o| (o.as_ref().map(|p| p.select_rate(n_try)).unwrap(), o))
                 .max_by(|(r1, _), (r2, _)| r1.partial_cmp(r2).unwrap_or(std::cmp::Ordering::Equal));
             if let Some((_, o)) = k {
-                let (n_trial, n_win, n_lose) = o.as_mut().unwrap().select();
+                let (n_trial, n_win, n_lose) = o.as_mut().unwrap().select(n_try);
                 // flip win/lose and add
                 self.n_trial += n_trial;
                 self.n_win += n_lose;
@@ -172,8 +172,8 @@ impl McTreeRoot {
                 if leaf.is_none() {
                     return None;
                 }
-                for _ in 0..n_total {
-                    leaf.as_mut().unwrap().select();
+                for n in 0..n_total {
+                    leaf.as_mut().unwrap().select(n + 1);
                 }
                 Some((leaf.unwrap().win_rate(), index))
             })
