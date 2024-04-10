@@ -1,7 +1,4 @@
-use crate::{
-    bitboard::{player_index, BitBoard, CHECK_MASK_TABLE},
-    N,
-};
+use crate::{bitboard::BitBoard, N};
 use rand::random;
 use rayon::prelude::*;
 
@@ -19,6 +16,7 @@ pub struct McTreeLeaf {
     n_trial: usize,
     n_win: usize,
     n_lose: usize,
+    policy: usize,
     leaves: Option<[Option<Box<McTreeLeaf>>; N * N]>,
 }
 
@@ -30,12 +28,13 @@ pub enum McResult {
 }
 
 impl McTreeLeaf {
-    pub fn new(board: BitBoard) -> Self {
+    pub fn new(board: BitBoard, policy: usize) -> Self {
         McTreeLeaf {
             current_board: board,
             n_trial: 0,
             n_win: 0,
             n_lose: 0,
+            policy: policy,
             leaves: None,
         }
     }
@@ -46,8 +45,9 @@ impl McTreeLeaf {
     }
 
     pub fn select_rate(&self, n_try: usize) -> f32 {
-        let c = 1.4f32;
-        (1f32 - self.win_rate()) + c * ((n_try as f32).ln() / self.n_trial as f32).sqrt()
+        let c = 0.1f32;
+        (1f32 - self.win_rate())
+            + c * (self.policy as f32) * ((n_try as f32).sqrt() / self.n_trial as f32)
     }
 
     fn run(&mut self) -> McResult {
@@ -102,9 +102,9 @@ impl McTreeLeaf {
         for i in 0..N {
             for j in 0..N {
                 let index = i * N + j;
-                if let Some(board) = self.current_board.put(index) {
+                if let Some((board, policy)) = self.current_board.put_with_simple_policy(index) {
                     n_trial += 1;
-                    let mut leaf = Box::new(McTreeLeaf::new(board));
+                    let mut leaf = Box::new(McTreeLeaf::new(board, policy));
                     let result = leaf.run();
                     if result == McResult::Win {
                         n_lose += 1;
@@ -160,7 +160,11 @@ impl McTreeLeaf {
 impl McTreeRoot {
     pub fn new(board: BitBoard) -> Self {
         let leaves = (0..N * N)
-            .map(|index| board.put(index).map(McTreeLeaf::new))
+            .map(|index| {
+                board
+                    .put_with_simple_policy(index)
+                    .map(|(b, p)| McTreeLeaf::new(b, p))
+            })
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();

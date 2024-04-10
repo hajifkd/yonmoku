@@ -5,7 +5,7 @@ use yonmoku::{bitboard::BitBoard, simple_puct::McTreeRoot, unpack_index, N};
 fn next(board: BitBoard, stone: usize) -> Option<(usize, f32)> {
     let n_try = 500_000;
     let mut tree = McTreeRoot::new(board);
-    tree.select(n_try * (1 + stone * stone / 24))
+    tree.select(n_try * (1 + stone * stone / 50))
 }
 
 fn prompt(msg: &str) -> io::Result<String> {
@@ -90,7 +90,7 @@ fn main() -> io::Result<()> {
                     if boards.len() > 1 {
                         boards.pop();
                         boards.last().unwrap().show();
-                        stone -= 2;
+                        stone -= 1;
                         continue 'game;
                     }
                 }

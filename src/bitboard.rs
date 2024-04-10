@@ -43,7 +43,7 @@ fn index_to_bit(piece: u128, index: usize) -> u128 {
 }
 
 lazy_static! {
-    pub(crate) static ref CHECK_MASK_TABLE: [Vec<Vec<u128>>; 2] = {
+    static ref CHECK_MASK_TABLE: [Vec<Vec<u128>>; 2] = {
         let mut result = [vec![], vec![]];
 
         for piece in (BLACK_PIECE.0 as usize)..=(WHITE_PIECE.0 as usize) {
@@ -136,7 +136,7 @@ lazy_static! {
     };
 }
 
-pub fn player_index(player: Player) -> usize {
+fn player_index(player: Player) -> usize {
     match player {
         Player::Black => BLACK_PIECE.0 as _,
         Player::White => WHITE_PIECE.0 as _,
@@ -215,6 +215,41 @@ impl BitBoard {
             new_board
         };
         Some(new_board)
+    }
+
+    fn simple_policy(&self, index: usize) -> usize {
+        CHECK_MASK_TABLE[player_index(self.next_player) - 1][index]
+            .iter()
+            .zip(CHECK_MASK_TABLE[player_index(self.next_player.next_player()) - 1][index].iter())
+            .map(|(mask_me, mask_opp)| {
+                let my_piece = self.board & mask_me;
+                let opp_piece = self.board & mask_opp;
+
+                if (my_piece == 0 && opp_piece != 0)
+                    || (my_piece != 0 && opp_piece == 0)
+                    || (my_piece == 0 && opp_piece == 0)
+                {
+                    1
+                } else {
+                    0
+                }
+            })
+            .sum()
+    }
+
+    /**
+     * 今の打ち手の評価関数の値も返す。
+     */
+    pub fn put_with_simple_policy(&self, index_2d: usize) -> Option<(Self, usize)> {
+        let index = self.find_index(index_2d)?;
+        let new_board = {
+            let mut new_board = self.clone();
+            new_board.board |=
+                index_to_bit(Into::<Piece>::into(new_board.next_player).0 as _, index);
+            new_board.next_player = self.next_player.next_player();
+            new_board
+        };
+        Some((new_board, self.simple_policy(index)))
     }
 
     pub fn is_full(&self) -> bool {
