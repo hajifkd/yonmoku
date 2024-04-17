@@ -17,7 +17,8 @@ pub struct McTreeLeaf {
     n_win: usize,
     n_lose: usize,
     policy: usize,
-    leaves: Option<[Option<Box<McTreeLeaf>>; N * N]>,
+    leaves: Option<Vec<McTreeLeaf>>,
+    is_checked: bool,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -30,6 +31,7 @@ pub enum McResult {
 impl McTreeLeaf {
     pub fn new(board: BitBoard, policy: usize) -> Self {
         McTreeLeaf {
+            is_checked: board.check_index().is_some(),
             current_board: board,
             n_trial: 0,
             n_win: 0,
@@ -45,7 +47,7 @@ impl McTreeLeaf {
     }
 
     pub fn select_rate(&self, n_try: usize) -> f32 {
-        let c = 0.1f32;
+        let c = 0.07f32;
         (1f32 - self.win_rate())
             + c * (self.policy as f32) * ((n_try as f32).sqrt() / self.n_trial as f32)
     }
@@ -86,6 +88,23 @@ impl McTreeLeaf {
         return McResult::Draw;
     }
 
+    fn run_and_push(&mut self, index: usize) -> Option<McResult> {
+        if let Some((board, policy)) = self.current_board.put_with_simple_policy(index) {
+            self.n_trial += 1;
+            let mut leaf = McTreeLeaf::new(board, policy);
+            let result = leaf.run();
+            if result == McResult::Win {
+                self.n_lose += 1;
+            } else {
+                self.n_win += 1;
+            }
+            self.leaves.as_mut().unwrap().push(leaf);
+            Some(result)
+        } else {
+            None
+        }
+    }
+
     // return (try, win, lose)
     pub fn expand(&mut self) -> (usize, usize, usize) {
         if self.current_board.win_index().is_some() {
@@ -94,32 +113,36 @@ impl McTreeLeaf {
 
             return (1, 1, 0);
         }
+
+        self.leaves = Some(vec![]);
+
+        if self.is_checked {
+            let index = self.current_board.check_index().unwrap();
+            let result = self.run_and_push(index).unwrap();
+            return match result {
+                McResult::Win => (1, 1, 0),
+                McResult::Lose => (1, 0, 1),
+                McResult::Draw => (1, 0, 0),
+            };
+        }
+
         let mut n_trial = 0;
         let mut n_win = 0;
         let mut n_lose = 0;
-        let mut leaves: [Option<Box<McTreeLeaf>>; N * N] = Default::default();
 
         for i in 0..N {
             for j in 0..N {
                 let index = i * N + j;
-                if let Some((board, policy)) = self.current_board.put_with_simple_policy(index) {
+                if let Some(result) = self.run_and_push(index) {
                     n_trial += 1;
-                    let mut leaf = Box::new(McTreeLeaf::new(board, policy));
-                    let result = leaf.run();
-                    if result == McResult::Win {
-                        n_lose += 1;
-                    } else {
-                        n_win += 1;
+                    match result {
+                        McResult::Win => n_win += 1,
+                        McResult::Lose => n_lose += 1,
+                        McResult::Draw => (),
                     }
-                    leaves[index] = Some(leaf);
                 }
             }
         }
-
-        self.leaves = Some(leaves);
-        self.n_trial += n_trial;
-        self.n_win += n_win;
-        self.n_lose += n_lose;
 
         (n_trial, n_win, n_lose)
     }
@@ -130,11 +153,10 @@ impl McTreeLeaf {
             // choose appropriate k
             let k = leaves
                 .into_iter()
-                .filter(|o| o.is_some())
-                .map(|o| (o.as_ref().map(|p| p.select_rate(self.n_trial)).unwrap(), o))
+                .map(|o| (o.select_rate(self.n_trial), o))
                 .max_by(|(r1, _), (r2, _)| r1.partial_cmp(r2).unwrap_or(std::cmp::Ordering::Equal));
             if let Some((_, o)) = k {
-                let (n_trial, n_win, n_lose) = o.as_mut().unwrap().select();
+                let (n_trial, n_win, n_lose) = o.select();
                 // flip win/lose and add
                 self.n_trial += n_trial;
                 self.n_win += n_lose;
@@ -145,7 +167,8 @@ impl McTreeLeaf {
                 self.n_trial += 1;
                 (1, 0, 0)
             }
-        } else if self.n_trial > N_TRIAL_THRESHOLD {
+        } else if self.is_checked || self.n_trial > N_TRIAL_THRESHOLD {
+            // 王手がかかっていたら試行回数は無視する。
             self.expand()
         } else {
             match self.run() {

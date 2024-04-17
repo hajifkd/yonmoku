@@ -52,7 +52,7 @@ fn main() -> io::Result<()> {
         let mut human = (0, 0);
         let board = boards.last().unwrap().clone();
         while {
-            let buffer = prompt("i,j?[M]atta?")?;
+            let buffer = prompt("i,j?[M]atta?[C]heat?")?;
             let input = buffer.split(",").collect::<Vec<_>>();
 
             if buffer == "M" {
@@ -62,6 +62,16 @@ fn main() -> io::Result<()> {
                     boards.last().unwrap().show();
                     stone -= 2;
                     continue 'game;
+                }
+                true
+            } else if buffer == "C" {
+                let board = board.clone();
+                if let Some((hand, rate)) = next(board.clone(), stone) {
+                    println!(
+                        "Player recommendation: {:?}, Player Rate: {}%",
+                        unpack_index(hand),
+                        100 - (rate * 100f32) as i32
+                    );
                 }
                 true
             } else if input.len() != 2 {
