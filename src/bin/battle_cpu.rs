@@ -1,4 +1,8 @@
-use yonmoku::{bitboard::BitBoard, mctree, simple_puct};
+use yonmoku::{
+    bitboard::BitBoard,
+    mctree,
+    simple_puct::{self, CountPolicy, Policy, SimplePolicy},
+};
 
 fn next_mcts_ucb1(board: BitBoard, stone: usize) -> Option<usize> {
     let n_try = 50_000;
@@ -7,9 +11,9 @@ fn next_mcts_ucb1(board: BitBoard, stone: usize) -> Option<usize> {
         .map(|(hand, _)| hand)
 }
 
-fn next_mcts_puct(board: BitBoard, stone: usize) -> Option<usize> {
-    let n_try = 500_000;
-    let mut tree = simple_puct::McTreeRoot::new(board);
+fn next_mcts_puct<T: Policy>(board: BitBoard, stone: usize) -> Option<usize> {
+    let n_try = 50_000;
+    let mut tree = simple_puct::McTreeRoot::<T>::new(board);
     tree.select(n_try * (1 + stone * stone / 24))
         .map(|(hand, _)| hand)
 }
@@ -57,15 +61,23 @@ fn battle(
 }
 
 fn main() {
-    let (sente_win, sente_draw) = battle(100, next_mcts_puct, next_mcts_ucb1);
+    let (sente_win, sente_draw) = battle(
+        100,
+        next_mcts_puct::<CountPolicy>,
+        next_mcts_puct::<SimplePolicy>,
+    );
     println!(
-        "New MCTS PUCT sente win_rate: {:.4}, draw_rate: {:.4}",
+        "MCTS PUCT CountPolicy sente win_rate: {:.4}, draw_rate: {:.4}",
         sente_win, sente_draw
     );
 
-    let (gote_lose, gote_draw) = battle(100, next_mcts_ucb1, next_mcts_puct);
+    let (gote_lose, gote_draw) = battle(
+        100,
+        next_mcts_puct::<SimplePolicy>,
+        next_mcts_puct::<CountPolicy>,
+    );
     println!(
-        "New MCTS PUCT gote win_rate: {:.4}, draw_rate: {:.4}",
+        "MCTS PUCT CountPolicy gote win_rate: {:.4}, draw_rate: {:.4}",
         1f64 - gote_lose,
         gote_draw
     );

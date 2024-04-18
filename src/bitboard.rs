@@ -222,12 +222,57 @@ impl BitBoard {
             .sum()
     }
 
+    fn count_policy(&self, index: usize) -> usize {
+        // スコアは適当
+        let boards: u64 = self.boards.iter().sum();
+        CHECK_MASK_TABLE[index]
+            .iter()
+            .map(|&mask| {
+                let my_piece = self.boards[player_index(self.next_player)] & mask;
+                let opp_piece = self.boards[player_index(self.next_player.next_player())] & mask;
+
+                if (my_piece == 0 && opp_piece != 0) || (my_piece != 0 && opp_piece == 0) {
+                    let ones = my_piece.count_ones() + opp_piece.count_ones();
+                    if ones == 1 {
+                        2
+                    } else {
+                        // 2石が揃っている。3石目。
+                        let last_one = ((!my_piece) & mask) & ((!opp_piece) & mask);
+                        // 下の段が埋まっているか。
+                        if boards & (last_one >> N * N) != 0 {
+                            // ただのリーチ
+                            1
+                        } else {
+                            // トラップ
+                            if last_one & 0xFFFF << 2 * N * N != 0 {
+                                // 三段目トラップ
+                                8
+                            } else {
+                                // 二or四段目トラップ
+                                5
+                            }
+                        }
+                    }
+                } else if my_piece == 0 && opp_piece == 0 {
+                    1
+                } else {
+                    0
+                }
+            })
+            .sum()
+    }
+
     /**
      * 今の打ち手の評価関数の値も返す。
      */
     pub fn put_with_simple_policy(&self, index_2d: usize) -> Option<(Self, usize)> {
         let index = self.find_index(index_2d)?;
         Some((self.put_without_check(index), self.simple_policy(index)))
+    }
+
+    pub fn put_with_count_policy(&self, index_2d: usize) -> Option<(Self, usize)> {
+        let index = self.find_index(index_2d)?;
+        Some((self.put_without_check(index), self.count_policy(index)))
     }
 
     pub fn is_full(&self) -> bool {

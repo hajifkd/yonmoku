@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{bitboard::BitBoard, N};
 use rand::random;
 use rayon::prelude::*;
@@ -5,20 +7,22 @@ use rayon::prelude::*;
 const N_TRIAL_THRESHOLD: usize = 20;
 
 #[derive(Debug)]
-pub struct McTreeRoot {
+pub struct McTreeRoot<T: Policy> {
     current_board: BitBoard,
-    leaves: [Option<McTreeLeaf>; N * N],
+    leaves: [Option<McTreeLeaf<T>>; N * N],
+    policy_type: PhantomData<fn() -> T>,
 }
 
-#[derive(Debug, Clone)]
-pub struct McTreeLeaf {
+#[derive(Debug)]
+struct McTreeLeaf<T: Policy> {
     current_board: BitBoard,
     n_trial: usize,
     n_win: usize,
     n_lose: usize,
     policy: usize,
-    leaves: Option<Vec<McTreeLeaf>>,
+    leaves: Option<Vec<McTreeLeaf<T>>>,
     is_checked: bool,
+    policy_type: PhantomData<fn() -> T>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -28,7 +32,41 @@ pub enum McResult {
     Draw,
 }
 
-impl McTreeLeaf {
+pub trait Policy {
+    fn put_with_policy(board: &BitBoard, index_2d: usize) -> Option<(BitBoard, usize)>;
+}
+
+pub struct SimplePolicy;
+pub struct CountPolicy;
+
+impl Policy for SimplePolicy {
+    fn put_with_policy(board: &BitBoard, index_2d: usize) -> Option<(BitBoard, usize)> {
+        board.put_with_simple_policy(index_2d)
+    }
+}
+
+impl Policy for CountPolicy {
+    fn put_with_policy(board: &BitBoard, index_2d: usize) -> Option<(BitBoard, usize)> {
+        board.put_with_count_policy(index_2d)
+    }
+}
+
+impl<T: Policy> Clone for McTreeLeaf<T> {
+    fn clone(&self) -> Self {
+        Self {
+            current_board: self.current_board.clone(),
+            n_trial: self.n_trial.clone(),
+            n_win: self.n_win.clone(),
+            n_lose: self.n_lose.clone(),
+            policy: self.policy.clone(),
+            leaves: self.leaves.clone(),
+            is_checked: self.is_checked.clone(),
+            policy_type: PhantomData,
+        }
+    }
+}
+
+impl<T: Policy> McTreeLeaf<T> {
     pub fn new(board: BitBoard, policy: usize) -> Self {
         McTreeLeaf {
             is_checked: board.check_index().is_some(),
@@ -38,6 +76,7 @@ impl McTreeLeaf {
             n_lose: 0,
             policy: policy,
             leaves: None,
+            policy_type: PhantomData,
         }
     }
 
@@ -47,7 +86,7 @@ impl McTreeLeaf {
     }
 
     pub fn select_rate(&self, n_try: usize) -> f32 {
-        let c = 0.07f32;
+        let c = 0.2f32;
         (1f32 - self.win_rate())
             + c * (self.policy as f32) * ((n_try as f32).sqrt() / self.n_trial as f32)
     }
@@ -89,7 +128,7 @@ impl McTreeLeaf {
     }
 
     fn run_and_push(&mut self, index: usize) -> Option<McResult> {
-        if let Some((board, policy)) = self.current_board.put_with_simple_policy(index) {
+        if let Some((board, policy)) = T::put_with_policy(&self.current_board, index) {
             self.n_trial += 1;
             let mut leaf = McTreeLeaf::new(board, policy);
             let result = leaf.run();
@@ -180,20 +219,17 @@ impl McTreeLeaf {
     }
 }
 
-impl McTreeRoot {
+impl<T: Policy> McTreeRoot<T> {
     pub fn new(board: BitBoard) -> Self {
         let leaves = (0..N * N)
-            .map(|index| {
-                board
-                    .put_with_simple_policy(index)
-                    .map(|(b, p)| McTreeLeaf::new(b, p))
-            })
+            .map(|index| T::put_with_policy(&board, index).map(|(b, p)| McTreeLeaf::<T>::new(b, p)))
             .collect::<Vec<_>>()
             .try_into()
-            .unwrap();
+            .unwrap_or_else(|_| panic!("never reach here."));
         McTreeRoot {
             current_board: board,
             leaves: leaves,
+            policy_type: PhantomData,
         }
     }
 

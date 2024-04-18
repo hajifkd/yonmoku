@@ -1,10 +1,14 @@
 use std::io;
 
-use yonmoku::{bitboard::BitBoard, simple_puct::McTreeRoot, unpack_index, N};
+use yonmoku::{
+    bitboard::BitBoard,
+    simple_puct::{McTreeRoot, SimplePolicy},
+    unpack_index, N,
+};
 
 fn next(board: BitBoard, stone: usize) -> Option<(usize, f32)> {
-    let n_try = 500_000;
-    let mut tree = McTreeRoot::new(board);
+    let n_try = 200_000;
+    let mut tree = McTreeRoot::<SimplePolicy>::new(board);
     tree.select(n_try * (1 + stone * stone / 50))
 }
 
